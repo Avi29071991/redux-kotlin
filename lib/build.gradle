@@ -25,6 +25,7 @@ kotlin {
     iosX64("iosSim")
     macosX64("macos")
     mingwX64("win")
+    mingwX86("win86")
     wasm32("wasm")
     linuxArm32Hfp("linArm32")
     linuxMips32("linMips32")
