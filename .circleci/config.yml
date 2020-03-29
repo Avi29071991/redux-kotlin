@@ -61,8 +61,6 @@ jobs:
           command: echo -e $GPG_KEY > PRIVATE_GPG_KEY.asc
           shell: bash.exe
 
-      - run: ./gradlew dependencies
-
       - save_cache:
           paths:
             - ~/.gradle
