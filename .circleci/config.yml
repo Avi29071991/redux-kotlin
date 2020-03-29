@@ -8,6 +8,9 @@ version: 2.1
 # EXECUTORS AND COMMANDS
 #
 
+orbs:
+  win: circleci/windows@2.2.0
+
 executors:
   redux_executor:
     docker:
@@ -17,6 +20,7 @@ executors:
       # Customize the JVM maximum heap limit
       JVM_OPTS: -Xmx3200m
       TERM: dumb
+
 
 jobs:
   publish_release:
@@ -41,6 +45,31 @@ jobs:
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
       - run: ./gradlew publish -PnexusUsername=$SONATYPE_USERNAME -PnexusPassword=$SONATYPE_PASSWORD '-Psigning.keyId=$KEY_ID' '-Psigning.password=$SIGNING_PASSWORD' -Psigning.secretKeyRingFile=PRIVATE_GPG_KEY.asc
+
+  publish_release_win:
+    executor: win/default
+    steps:
+      - checkout
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          name: Write gpg key file
+          command: echo -e $GPG_KEY > PRIVATE_GPG_KEY.asc
+          shell: bash.exe
+
+      - run: ./gradlew dependencies
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}
+
+      - run: ./gradlew publish -PnexusUsername=$SONATYPE_USERNAME -PnexusPassword=$SONATYPE_PASSWORD '-Psigning.keyId=$KEY_ID' '-Psigning.password=$SIGNING_PASSWORD' -Psigning.secretKeyRingFile=PRIVATE_GPG_KEY.asc
+
 
 
   build:
@@ -89,11 +118,17 @@ workflows:
 
   publish_release_artifacts:
     jobs:
+      - publish_release_win:
+          filters:
+            branches:
+              only:
+                - task/win-build
       - publish_release:
           filters:
             branches:
                 only:
                   - release
+
   deploy_website:
     jobs:
       - deploy_website_to_prod:
